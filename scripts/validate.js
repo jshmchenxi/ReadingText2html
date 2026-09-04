@@ -19,10 +19,20 @@ function run(script, ...args) {
   execFileSync(process.execPath, [path.join(scriptsDir, script), ...args], { stdio: "inherit" });
 }
 
+function assertDocx(stem, kind) {
+  const file = path.join(outputDir, `${stem}_${kind}.docx`);
+  if (!fs.existsSync(file) || fs.statSync(file).size === 0) {
+    throw new Error(`Missing Word output: ${file}. Run build.js (which exports .docx) first.`);
+  }
+  return file;
+}
+
 if (mode === "--lesson-only") {
   const lessonNorm = path.join(outputDir, "source", "normalized_content.json");
   if (!fs.existsSync(lessonNorm)) throw new Error(`Missing ${lessonNorm}`);
   run("validate_lesson.js", lessonNorm, outputDir);
+  const stem = JSON.parse(fs.readFileSync(lessonNorm, "utf8")).meta.filenameStem;
+  assertDocx(stem, "Reading_Lesson");
   process.exit(0);
 }
 
@@ -30,6 +40,8 @@ if (mode === "--worksheet-only" || mode === "--workbook-only") {
   const worksheetNorm = path.join(outputDir, "source", "normalized_worksheet.json");
   if (!fs.existsSync(worksheetNorm)) throw new Error(`Missing ${worksheetNorm}`);
   run("validate_worksheet.js", worksheetNorm, outputDir);
+  const stem = JSON.parse(fs.readFileSync(worksheetNorm, "utf8")).meta.filenameStem;
+  assertDocx(stem, "Student_Worksheet");
   process.exit(0);
 }
 
@@ -48,6 +60,8 @@ for (const file of [lessonNorm, worksheetNorm]) {
 
 run("validate_lesson.js", lessonNorm, outputDir);
 run("validate_worksheet.js", worksheetNorm, outputDir);
+const lessonDocx = assertDocx(record.stem, "Reading_Lesson");
+const worksheetDocx = assertDocx(record.stem, "Student_Worksheet");
 
 console.log(
   JSON.stringify(
@@ -56,6 +70,8 @@ console.log(
       stem: record.stem,
       lesson: record.outputs.lesson,
       worksheet: record.outputs.worksheet || record.outputs.workbook,
+      lessonDocx: path.basename(lessonDocx),
+      worksheetDocx: path.basename(worksheetDocx),
     },
     null,
     2

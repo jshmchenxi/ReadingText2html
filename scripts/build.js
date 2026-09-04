@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Build reading courseware (lesson + worksheet) in one command.
+ * HTML courseware/worksheet plus editable Word (.docx) versions.
  *
  * Usage:
  *   node build.js <package.json> <output_dir>
@@ -11,8 +12,14 @@
 
 const fs = require("fs");
 const path = require("path");
+const { execFileSync } = require("child_process");
 const { buildLesson } = require("./build_lesson");
 const { buildWorksheet } = require("./build_worksheet");
+
+const DOCX_EXPORTERS = {
+  lesson: "export_lesson_docx.py",
+  worksheet: "export_worksheet_docx.py",
+};
 
 function usage() {
   console.error(`Usage:
@@ -45,6 +52,48 @@ function writePackageRecord(outDir, record) {
   );
 }
 
+function runDocxExporter(kind, normalizedJsonPath, outDir) {
+  const scriptPath = path.join(__dirname, DOCX_EXPORTERS[kind]);
+  const pythonCandidates = process.platform === "win32"
+    ? ["python", "python3"]
+    : ["python3", "python"];
+  let lastError = null;
+
+  for (const pythonBin of pythonCandidates) {
+    try {
+      execFileSync(
+        pythonBin,
+        ["-B", scriptPath, normalizedJsonPath, outDir],
+        { stdio: "inherit" }
+      );
+      return;
+    } catch (error) {
+      lastError = error;
+      if (error.code !== "ENOENT") {
+        throw new Error(
+          `Word export failed (${pythonBin} ${path.basename(scriptPath)}): ${error.message}`
+        );
+      }
+    }
+  }
+
+  throw new Error(
+    `Word export requires Python 3 (python3). Tried: ${pythonCandidates.join(", ")} — ${lastError?.message || lastError}`
+  );
+}
+
+function exportLessonDocx(outDir, stem) {
+  const normalized = path.join(outDir, "source", "normalized_content.json");
+  runDocxExporter("lesson", normalized, outDir);
+  return path.join(outDir, `${stem}_Reading_Lesson.docx`);
+}
+
+function exportWorksheetDocx(outDir, stem) {
+  const normalized = path.join(outDir, "source", "normalized_worksheet.json");
+  runDocxExporter("worksheet", normalized, outDir);
+  return path.join(outDir, `${stem}_Student_Worksheet.docx`);
+}
+
 function buildPackage({ outDir, lesson, worksheet, lessonSource, worksheetSource, packageSource }) {
   assertSameStem(lesson.meta, worksheet.meta);
 
@@ -57,13 +106,19 @@ function buildPackage({ outDir, lesson, worksheet, lessonSource, worksheetSource
     );
   }
 
+  const stem = lessonResult.stem;
+  const lessonDocxFile = exportLessonDocx(outDir, stem);
+  const worksheetDocxFile = exportWorksheetDocx(outDir, stem);
+
   const record = {
     builtAt: new Date().toISOString(),
-    stem: lessonResult.stem,
+    stem,
     skill: "reading-courseware",
     outputs: {
       lesson: path.basename(lessonResult.outFile),
       worksheet: path.basename(worksheetResult.outFile),
+      lessonDocx: path.basename(lessonDocxFile),
+      worksheetDocx: path.basename(worksheetDocxFile),
     },
     sources: {
       lesson: path.resolve(lessonSource),
@@ -74,9 +129,11 @@ function buildPackage({ outDir, lesson, worksheet, lessonSource, worksheetSource
   writePackageRecord(outDir, record);
 
   return {
-    stem: lessonResult.stem,
+    stem,
     lessonFile: lessonResult.outFile,
     worksheetFile: worksheetResult.outFile,
+    lessonDocxFile,
+    worksheetDocxFile,
     record,
   };
 }
@@ -154,12 +211,42 @@ if (require.main === module) {
 
   if (inputs.mode === "lesson") {
     const result = buildLesson(inputs.lesson, inputs.outDir, { sourcePath: inputs.lessonSource });
+    const docxFile = exportLessonDocx(inputs.outDir, result.stem);
     console.log("Wrote", result.outFile);
-    console.log(JSON.stringify({ ok: true, mode: "lesson", stem: result.stem }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          mode: "lesson",
+          stem: result.stem,
+          outputs: {
+            lesson: path.basename(result.outFile),
+            lessonDocx: path.basename(docxFile),
+          },
+        },
+        null,
+        2
+      )
+    );
   } else if (inputs.mode === "worksheet") {
     const result = buildWorksheet(inputs.worksheet, inputs.outDir, { sourcePath: inputs.worksheetSource });
+    const docxFile = exportWorksheetDocx(inputs.outDir, result.stem);
     console.log("Wrote", result.outFile);
-    console.log(JSON.stringify({ ok: true, mode: "worksheet", stem: result.stem }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          mode: "worksheet",
+          stem: result.stem,
+          outputs: {
+            worksheet: path.basename(result.outFile),
+            worksheetDocx: path.basename(docxFile),
+          },
+        },
+        null,
+        2
+      )
+    );
   } else {
     const result = buildPackage(inputs);
     console.log("Wrote", result.lessonFile);

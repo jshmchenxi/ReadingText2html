@@ -1,8 +1,8 @@
 ---
 name: reading-courseware
-description: Transform English reading materials into interactive HTML courseware (Pre/While/Post lesson) AND a matched student worksheet in one build. Use when the user wants reading课件, interactive reading lesson, worksheet, 练习册, or both lesson + worksheet together from textbook screenshots or reading passages.
+description: Transform English reading materials into interactive HTML courseware (Pre/While/Post lesson) AND a matched student worksheet in one build, with both deliverables also exported as editable Word (.docx). Use when the user wants reading课件, interactive reading lesson, worksheet, 练习册, Word version, or both lesson + worksheet together from textbook screenshots or reading passages.
 metadata:
-  version: "1.5.9"
+  version: "1.6.0"
 ---
 
 # Reading Courseware
@@ -13,8 +13,12 @@ metadata:
 |--------|-------------|
 | `<stem>_Reading_Lesson.html` | Pre / While / Post interactive courseware |
 | `<stem>_Student_Worksheet.html` | Matching, fill-in, sentence imitation, paragraph imitation, summary |
+| `<stem>_Reading_Lesson.docx` | Editable Word copy of the lesson (answers/teacher notes visible) |
+| `<stem>_Student_Worksheet.docx` | Editable Word copy of the worksheet (student-facing) |
 
 Content is canonical JSON; layout is locked HTML templates. Do not freehand new shells.
+Word exports are generated from the same canonical JSON and are static/editable snapshots —
+they do not include the interactive click/flip/check behaviour of the HTML outputs.
 
 ## 1. Confirm the input
 
@@ -49,7 +53,7 @@ Combined `package.json`:
 
 Fixture example: `evals/fixtures/caribbean/content.json` + `worksheet.json`.
 
-## 3. Build (default: both outputs)
+## 3. Build (default: both outputs, HTML + Word)
 
 From this skill directory:
 
@@ -60,6 +64,10 @@ node scripts/build.js /path/to/content.json /path/to/worksheet.json /path/to/out
 # Single package.json
 node scripts/build.js /path/to/package.json /path/to/output
 ```
+
+The default build writes **both** the interactive HTML files and editable Word
+(`.docx`) versions of the lesson and worksheet. Building Word files requires
+Python 3 (`python3` or `python`) on the command line.
 
 Optional single-output flags:
 
@@ -72,6 +80,8 @@ Outputs:
 
 - `<stem>_Reading_Lesson.html`
 - `<stem>_Student_Worksheet.html`
+- `<stem>_Reading_Lesson.docx`
+- `<stem>_Student_Worksheet.docx`
 - `source/normalized_content.json`
 - `source/normalized_worksheet.json`
 - `source/package-build-record.json`
@@ -81,6 +91,8 @@ Outputs:
 ```bash
 node scripts/validate.js /path/to/output
 ```
+
+Validation also checks that both Word outputs exist alongside the HTML files.
 
 Then follow [references/release-gates.md](references/release-gates.md).
 
@@ -116,5 +128,5 @@ node .cursor/skills/reading-courseware/scripts/build.js \
 ## Anti-patterns
 
 - Installing or invoking three separate skills — use **this skill only**.
-- Hand-editing built HTML instead of editing JSON and rebuilding.
+- Hand-editing built HTML or Word (.docx) instead of editing JSON and rebuilding.
 - Worksheet vocabulary not traceable to the lesson's while-reading content.

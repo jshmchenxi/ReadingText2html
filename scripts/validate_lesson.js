@@ -74,7 +74,9 @@ for (const needle of contracts) {
 }
 
 // Embedded INITIAL_DATA must match normalized source
-const match = html.match(/const INITIAL_DATA = (\{[\s\S]*?\});\s*\n\s*const meta/);
+const match = html.match(
+  /const INITIAL_DATA = (\{[\s\S]*?\});\s*\n(?:\s*hydrateFromLocalStorageIfNewer\(\);\s*\n)?\s*const meta/
+);
 if (!match) throw new Error("HTML INITIAL_DATA is missing or malformed.");
 const embedded = JSON.parse(match[1]);
 if (JSON.stringify(embedded) !== JSON.stringify(source)) {

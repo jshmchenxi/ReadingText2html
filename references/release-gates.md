@@ -30,6 +30,10 @@ Static validation alone is not a release claim. After `build_lesson.js` and
 9. **Visual contract** — sand background, ocean hero, coral/gold accents, Fraunces + Work Sans.
    If the page looks like a generic purple dashboard or a flat white quiz sheet, the wrong
    template was used — rebuild from `assets/reading-lesson.html.template`.
+10. **Word outputs** — open `<stem>_Reading_Lesson.docx` and
+    `<stem>_Student_Worksheet.docx` in Word / LibreOffice. Both should open without repair
+    prompts, contain clean plain text (no raw HTML tags), keep stage/part order, and stay
+    faithful to the canonical JSON.
 
 ## Do not claim release if
 

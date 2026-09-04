@@ -1,9 +1,9 @@
 # Reading Courseware Skill
 
-**版本：** 1.5.9  
+**版本：** 1.6.0  
 **Skill 名称：** `reading-courseware`
 
-将英语阅读材料（教材截图、原文段落、OCR 文本等）转化为一套完整的互动教学产物：**Pre / While / Post 互动课件** + **配套学生练习册**，一次构建，双份输出。
+将英语阅读材料（教材截图、原文段落、OCR 文本等）转化为一套完整的互动教学产物：**Pre / While / Post 互动课件** + **配套学生练习册**，一次构建同时输出 **HTML 与可编辑 Word（.docx）**。
 
 ---
 
@@ -28,9 +28,9 @@
 
 1. **准备材料** — 上传教材截图、粘贴英文原文，或指定已有文本文件路径
 2. **让 Agent 生成并构建** — 生成 `content.json` + `worksheet.json`，运行 `scripts/build.js`
-3. **验收产物** — 运行 `scripts/validate.js`，在浏览器打开生成的 HTML
+3. **验收产物** — 运行 `scripts/validate.js`，在浏览器打开生成的 HTML，并用 Word / LibreOffice 检查两份 .docx
 
-**前置依赖：** Node.js >= 18
+**前置依赖：** Node.js >= 18；Python 3（仅用于生成 Word .docx 文件）
 
 ### 各平台怎么调用
 
@@ -59,7 +59,7 @@
 
 ```text
 请阅读 @reading-courseware/SKILL.md，根据我上传的教材截图生成课件与练习册 JSON，
-并运行 node scripts/build.js 构建 HTML。
+并运行 node scripts/build.js 构建 HTML 与 Word 版本。
 ```
 
 **Codex CLI 示例：**
@@ -79,7 +79,7 @@ worksheet.json, then run node scripts/build.js and node scripts/validate.js into
 |------|------|
 | **内容即 JSON** | 所有教学内容写入规范化 JSON，不直接改 HTML |
 | **布局即模板** | 视觉与交互由固定 HTML 模板锁定，保证风格一致 |
-| **一次构建** | 一条命令同时生成课件 + 练习册 |
+| **一次构建** | 一条命令同时生成课件 + 练习册的 HTML 与 Word（.docx）版本 |
 | **内容可追溯** | 练习册词汇与句式必须来自读中环节的语言点 |
 
 ---
@@ -104,6 +104,8 @@ reading-courseware/
 │   ├── build.js                # 统一构建入口
 │   ├── build_lesson.js         # 课件构建
 │   ├── build_worksheet.js      # 练习册构建
+│   ├── export_lesson_docx.py   # 课件 → Word .docx
+│   ├── export_worksheet_docx.py # 练习册 → Word .docx
 │   ├── validate.js             # 统一校验入口
 │   ├── validate_lesson.js      # 课件校验
 │   ├── validate_worksheet.js   # 练习册校验
@@ -182,7 +184,7 @@ reading-courseware/
 
 ### 第三步：构建
 
-在 skill 目录下执行（需 Node.js）：
+在 skill 目录下执行（需 Node.js；Word 输出还需 Python 3）：
 
 ```bash
 # 推荐：两份独立 JSON
@@ -198,12 +200,16 @@ node scripts/build.js --lesson-only /path/to/content.json /path/to/output
 node scripts/build.js --worksheet-only /path/to/worksheet.json /path/to/output
 ```
 
+默认构建会同时生成 **HTML 交互版 + Word 可编辑版**。
+
 #### 构建产物
 
 | 文件 | 说明 |
 |------|------|
 | `<stem>_Reading_Lesson.html` | Pre / While / Post 互动课件 |
 | `<stem>_Student_Worksheet.html` | 配套学生练习册 |
+| `<stem>_Reading_Lesson.docx` | 课件 Word 可编辑版（含参考答案/教师备注） |
+| `<stem>_Student_Worksheet.docx` | 练习册 Word 可编辑版（学生用） |
 | `source/normalized_content.json` | 规范化后的课件 JSON |
 | `source/normalized_worksheet.json` | 规范化后的练习册 JSON |
 | `source/package-build-record.json` | 构建记录（时间戳、来源路径等） |
@@ -221,7 +227,9 @@ node scripts/validate.js /path/to/output --lesson-only
 node scripts/validate.js /path/to/output --worksheet-only
 ```
 
-静态校验通过后，还需按 [references/release-gates.md](references/release-gates.md) 在浏览器中人工验收（阶段导航、高亮持久、翻转卡片、TTS 等）。
+静态校验（含两份 Word 文件的存在性检查）通过后，还需按
+[references/release-gates.md](references/release-gates.md) 在浏览器中人工验收
+（阶段导航、高亮持久、翻转卡片、TTS 等），并打开两份 Word 文件确认版式与内容。
 
 ---
 
@@ -240,6 +248,8 @@ node .cursor/skills/reading-courseware/scripts/build.js \
 
 - `Storytelling_in_the_Caribbean_Reading_Lesson.html`
 - `Storytelling_in_the_Caribbean_Student_Worksheet.html`
+- `Storytelling_in_the_Caribbean_Reading_Lesson.docx`
+- `Storytelling_in_the_Caribbean_Student_Worksheet.docx`
 
 ---
 
@@ -316,7 +326,7 @@ node .cursor/skills/reading-courseware/scripts/build.js \
 - 不要从零重写 CSS/JS，除非明确要求修改模板
 - 不要将受版权保护的教材页面图片嵌入公开 HTML
 - 练习册客观题答案在 Submit 前隐藏；句式/段落仿写无标准答案
-- 修改内容应编辑 JSON 后重新构建，**不要手改生成的 HTML**
+- 修改内容应编辑 JSON 后重新构建，**不要手改生成的 HTML 或 Word .docx**
 
 ---
 
@@ -325,10 +335,10 @@ node .cursor/skills/reading-courseware/scripts/build.js \
 | 错误做法 | 正确做法 |
 |----------|----------|
 | 调用多个独立 skill | 只用 `reading-courseware` 一个 skill |
-| 手改构建后的 HTML | 改 JSON → 重新 `build.js` |
+| 手改构建后的 HTML / Word | 改 JSON → 重新 `build.js` |
 | 练习册词汇与课件无关 | 全部来自读中 Power Words / Phrases / Structures |
 | 每篇文章都用 radial hub 结构图 | 按文章类型选 layout |
-| 跳过 validate 和 release-gates | 构建后校验 + 浏览器人工验收 |
+| 跳过 validate 和 release-gates | 构建后校验 + 浏览器/Word 人工验收 |
 
 ---
 
@@ -336,7 +346,7 @@ node .cursor/skills/reading-courseware/scripts/build.js \
 
 本 Skill 采用 **「规范文档 (Markdown) + 数据格式 (JSON) + 构建脚本 (Node.js)」** 的标准架构设计，具备极强的跨平台兼容性。只要所用 AI 工具具备**文件读写**与**终端/脚本执行**（或协助用户执行）能力，即可无缝使用。
 
-> **前置依赖：** 运行环境需安装 Node.js（推荐 Node.js >= 18）。
+> **前置依赖：** 运行环境需安装 Node.js（推荐 Node.js >= 18）与 Python 3（Word 导出用）。
 
 ---
 
@@ -359,7 +369,7 @@ Workbuddy 支持工作区多模态解析与智能体执行：
 - **调用方式**：
   - **多模态输入**：直接在对话框上传教材截图或粘贴阅读篇章文本。
   - **指令提示**：在对话中引用 `SKILL.md`，例如：
-    > “请阅读 `@reading-courseware/SKILL.md` 规则。根据我上传的教材图片，按照 `references/lesson-schema.md` 和 `references/worksheet-schema.md` 生成课件与练习册 JSON，并运行 `scripts/build.js` 构建出最终的 HTML 课件与练习册。”
+    > “请阅读 `@reading-courseware/SKILL.md` 规则。根据我上传的教材图片，按照 `references/lesson-schema.md` 和 `references/worksheet-schema.md` 生成课件与练习册 JSON，并运行 `scripts/build.js` 构建出最终的 HTML 课件、练习册及两份 Word 版本。”
 - **执行亮点**：Workbuddy 会先进行 OCR 和结构化提取，生成符合 Schema 的 JSON，随后直接通过内置终端运行 Node 构建与验证脚本。
 
 #### WorkBuddy 上传 Skill 包
